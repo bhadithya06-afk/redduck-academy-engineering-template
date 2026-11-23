@@ -3,6 +3,7 @@
 // Run with: npx tsx src/factory.ts
 
 import { strict as assert } from "node:assert";
+import { createHash } from "node:crypto";
 
 // The content an item is built from. Any set of string fields; here, a short document.
 export type Content = Record<string, string>;
@@ -12,15 +13,22 @@ export interface Item {
   id: string;
 }
 
-// TODO: return an Item holding the content and an id derived from its content (use derive).
+// Return an Item holding the content and an id derived from its content (use derive).
 export function create(content: Content): Item {
-  throw new Error("not implemented");
+  return {
+    content: { ...content },
+    id: derive(content),
+  };
 }
 
-// TODO: recompute the id from the content alone, with no registry and no shared state,
-// so the demo passes.
+// Recompute the id from the content alone, with no registry and no shared state,
+// canonicalizing key order so identical content always yields the same SHA-256 digest.
 export function derive(content: Content): string {
-  throw new Error("not implemented");
+  const canonicalEntries = Object.keys(content)
+    .sort()
+    .map((key) => [key, content[key]] as const);
+  const canonicalPayload = JSON.stringify(canonicalEntries);
+  return createHash("sha256").update(canonicalPayload).digest("hex");
 }
 
 // Demo: create an item, have a second party derive the id from the same content, then tamper.

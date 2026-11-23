@@ -2,17 +2,17 @@
 
 ## Language
 
-<!-- Keep only the language you completed. Delete the others so a single value is left, e.g. language: "python" -->
-language: "typescript" | "python" | "java" | "csharp"
+language: "typescript"
 
 ## Why derive the identifier from content
 
-Explain why an identifier that each party recomputes from the content is a stronger guarantee
-than a name looked up in a registry. Say what the registry would have forced someone to trust,
-and why recomputing removes it.
+A registry maps an arbitrary identifier (such as an auto-incrementing integer or random UUID) to a piece of content stored in a central table. Relying on a registry forces every verifier to trust the registry operator, its network availability, and its storage integrity: if the registry is compromised, misconfigured, or offline, it can silently rebind an existing ID to altered content or fail to verify the item at all.
+
+When the identifier is derived deterministically from canonicalized content via a cryptographic hash (`SHA-256` over sorted `[key, value]` entries), the binding between identifier and content is mathematical rather than administrative. Any party holding the content can independently recompute the identifier offline with zero shared state, removing the need to query or trust a central authority.
 
 ## What changes when the content changes
 
-The identifier changes with the content. Explain why that is a feature, because any substitution
-becomes detectable, and also a constraint, because you cannot keep one identifier while changing
-the content it points to.
+Because the identifier is a cryptographic function of every key and value in the content, modifying even a single character produces a completely different identifier.
+
+- **As a feature (tamper-evidence):** Content-derived identity turns every item into a self-verifying artifact. If a middleman or storage layer substitutes or edits any field, a recipient recomputing `derive(content)` immediately detects the mismatch without needing signatures or audit logs from a registry.
+- **As a constraint (immutability of identity):** You cannot update an item's content in place while keeping the same identifier. Any legitimate edit produces a brand-new identifier, which means mutable references (such as "latest version of a document") cannot be represented by the content ID itself and must instead be tracked through a separate pointer or version chain.
