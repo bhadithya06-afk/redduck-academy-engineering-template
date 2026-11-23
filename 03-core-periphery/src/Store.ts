@@ -11,8 +11,19 @@
 
 import { SEED_USERS, UserRecord, hash } from "./store-data";
 
+export interface PublicProfile {
+  username: string;
+  role: string;
+}
+
+// CORE: Holds the sensitive UserRecord map (including passwordHash) privately
+// and exposes only a narrow interface (verify + hash-free profile reads).
 export class UserStore {
-  private users: Record<string, UserRecord> = SEED_USERS;
+  private users: Record<string, UserRecord>;
+
+  constructor(initialUsers: Record<string, UserRecord> = SEED_USERS) {
+    this.users = { ...initialUsers };
+  }
 
   // The one legitimate core operation. It checks a password and returns only a boolean.
   verify(username: string, password: string): boolean {
@@ -21,7 +32,32 @@ export class UserStore {
     return user.passwordHash === hash(password);
   }
 
-  // TODO: add a hash-free public-profile lookup (username and role).
+  // Narrow, hash-free public-profile lookup returning only username and role.
+  getPublicProfile(username: string): PublicProfile | undefined {
+    const user = this.users[username];
+    if (!user) return undefined;
+    return {
+      username: user.username,
+      role: user.role,
+    };
+  }
 
-  // TODO: rebuild the report so it lists users without exposing a hash.
+  // Narrow enumeration of known usernames so peripheral reporting can iterate
+  // without direct access to private UserRecord entries.
+  listUsernames(): string[] {
+    return Object.keys(this.users);
+  }
+}
+
+// PERIPHERY: Built strictly on top of UserStore's narrow public interface.
+// It has no reference to UserRecord or passwordHash and cannot obtain a hash.
+export function buildUserReport(store: UserStore): PublicProfile[] {
+  const report: PublicProfile[] = [];
+  for (const username of store.listUsernames()) {
+    const profile = store.getPublicProfile(username);
+    if (profile) {
+      report.push(profile);
+    }
+  }
+  return report;
 }
